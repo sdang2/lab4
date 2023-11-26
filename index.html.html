@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Death Cases Per 10k in every Washington County</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.5.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.5.0/mapbox-gl.js"></script>
+    <style>
+        h2, h3 {
+            margin: 10px;
+            font-size: 18px;
+        }
+
+        h3 {
+            font-size: 16px;
+        }
+
+        p {
+            margin: 10px;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+        }
+
+        .map-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            background: rgba(255, 255, 255, 0.8);
+            border-style: solid;
+            border-width: 1px;
+            border-color: rgba(0, 0, 0, 0.2);
+            margin-left: 20px;
+            font-family: Arial, sans-serif;
+            overflow: auto;
+            border-radius: 3px;
+        }
+
+        #features {
+            top: 0;
+            height: 150px;
+            margin-top: 20px;
+            width: 200px;
+        }
+
+        #legend {
+            padding: 10px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            line-height: 18px;
+            height: 210px;
+            margin-bottom: 40px;
+            width: 150px;
+        }
+
+        .legend-key {
+            display: inline-block;
+            border-radius: 20%;
+            width: 10px;
+            height: 10px;
+            margin-right: 5px;
+        }
+
+        .mapboxgl-canvas-container.mapboxgl-interactive,
+        .mapboxgl-ctrl-group button.mapboxgl-ctrl-compass {
+            cursor: unset;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+    <div class='map-overlay' id='features'>
+        <h2>Washington County Fully Vaccinated Rate</h2>
+        <div id='text-description'>
+            <p>Hover over any county!</p>
+        </div>
+    </div>
+    <div class='map-overlay' id='legend'></div>
+    <script>
+        mapboxgl.accessToken = 'pk.eyJ1IjoiamFrb2J6aGFvIiwiYSI6ImNpcms2YWsyMzAwMmtmbG5icTFxZ3ZkdncifQ.P9MBej1xacybKcDN_jehvw';
+
+        const map = new mapboxgl.Map({
+                container: 'map', // container ID
+                style: 'mapbox://styles/mapbox/light-v10', // style URL
+                zoom: 6, // starting zoom
+                center: [-120.7401, 47.7511] // starting center
+            }
+        );
+
+        async function geojsonFetch() { 
+            let response = await fetch('assets/wa-covid-data-102521.geojson');
+            covidData = await response.json();
+
+            map.addSource('covidData', {
+            type: 'geojson',
+            data: covidData
+             });
+
+
+            map.addLayer({
+                'id': 'covidData-layer',
+                'type': 'fill',
+                'source': 'covidData',
+                'paint': {
+                    'fill-color': [
+                        'step',
+                        ['get', 'fullyVaxPer10k'],
+                        '#EDF8E9',   // stop_output_0
+                        1000,        // stop_input_0
+                        '#C7E9C0',   // stop_output_1
+                        2000,        // stop_input_1
+                        '#A1D99B',   // stop_output_2
+                        3000,        // stop_input_2
+                        '#74C476',   // stop_output_3
+                        4000,        // stop_input_3
+                        '#41AB5D',   // stop_output_4
+                        5000,        // stop_input_4
+                        '#238B45',   // stop_output_5
+                        6000,        // stop_input_5
+                        '#006D2C',   // stop_output_6
+                        7000,        // stop_input_6
+                        "#00441B"    // stop_output_7
+                    ],
+                    'fill-outline-color': '#BBBBBB',
+                    'fill-opacity': 0.7,
+                    
+                }
+            });
+
+            const layers = [
+            '0-999',
+            '1000-1999',
+            '2000-2999',
+            '3000-3999',
+            '4000-4999',
+            '5000-5999',
+            '6000-6999',
+            '6999 and more'
+            ];
+            const colors = [
+            '#edf8e9',
+            '#c7e9c0',
+            '#a1d99b',
+            '#74c476',
+            '#41ab5d',
+            '#238b45',
+            '#006d2c',
+            '#00441b'
+        ];
+
+            const legend = document.getElementById('legend');
+                legend.innerHTML = "<b>Vaccination Rate<br>(Vaccination per 10k people)</b><br><br>";
+
+                layers.forEach((layer, i) => {
+                    const color = colors[i];
+                    const item = document.createElement('div');
+                    const key = document.createElement('span');
+                    key.className = 'legend-key';
+                    key.style.backgroundColor = color;
+
+                    const value = document.createElement('span');
+                    value.innerHTML = `${layer}`;
+                    item.appendChild(key);
+                    item.appendChild(value);
+                    legend.appendChild(item);
+                });
+
+                map.on('mousemove', ({point}) => {
+                    const covid = map.queryRenderedFeatures(point, {
+                        layers: ['covidData-layer']
+                    });
+                    document.getElementById('text-description').innerHTML = covid.length ?
+                        `<h3>${covid[0].properties.name}</h3><p><strong><em>${covid[0].properties.fullyVaxPer10k}</strong> rate per 10k people</em></p>` :
+                        `<p>Hover over any county! </p>`;
+                });
+        }
+        geojsonFetch();
+    </script>
+
+</body>
+
+</html>
